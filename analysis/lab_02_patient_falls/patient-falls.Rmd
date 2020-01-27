@@ -1,0 +1,133 @@
+---
+title: "Patient Falls"
+author: "Andriy Koval"
+date: "January 20, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+```
+
+## Input Data
+```{r echo = F, message = F, warning = F}
+path_file <- "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+sheet_names <- readxl::excel_sheets(path_file)
+dto <- list()
+for(sheet_i in sheet_names){
+   # i <- sheet_names[1]
+  dto[[sheet_i]] <- readxl::read_xlsx(path_file,sheet = sheet_i)
+}
+ds <- dto$`02 - Patient Falls-Single Hosp` %>% tibble::as_tibble()
+```
+
+```{r}
+ds %>% knitr::kable()
+```
+
+## 5.1 Horizontal Bar
+
+```{r}
+order_of_rows <- ds %>% 
+  # arrange(desc(`Total Patient Falls Rate`)) %>% 
+  arrange((`Total Patient Falls Rate`)) %>% 
+  select(`Type of Care`) %>% 
+  as.list() %>% unlist() %>% as.character()
+order_of_rows
+
+g1 <- ds %>% 
+  mutate(
+    `Type of Care` = factor(`Type of Care`, levels = order_of_rows)
+  ) %>% 
+  ggplot(aes(y=`Total Patient Falls Rate`,x  = `Type of Care`))+
+  geom_bar(stat = "identity", fill = "salmon", alpha = .5)+
+  geom_text(aes(label = round(`Total Patient Falls Rate`,2)),nudge_y = .3)+
+  coord_flip()+
+  theme_bw()
+g1
+```
+
+
+# 5.2 Side-by-side Bar Graph
+
+```{r}
+order_of_rows <- ds %>% 
+  # arrange(desc(`Total Patient Falls Rate`)) %>% 
+  arrange((`Total Patient Falls Rate`)) %>% 
+  select(`Type of Care`) %>% 
+  as.list() %>% unlist() %>% as.character()
+order_of_rows
+
+d2 <- ds %>% 
+  select("Type of Care", "Patient Falls No Injury Rate", "Patient Falls with Injury Rate") %>% 
+  tidyr::gather("Injury", "Patient Falls Rate", 2:3) %>% 
+  mutate(
+    Injury = Injury == "Patient Falls with Injury Rate"
+  )
+g2 <- d2 %>% 
+  mutate(
+    `Type of Care` = factor(`Type of Care`, levels = order_of_rows)
+    # `Type of Care` = factor(`Type of Care`, levels = rev(levels(`Type of Care`)))
+    # ,Injury = rev(Injury)
+  ) %>% 
+  ggplot(aes(y=`Patient Falls Rate`,x  = `Type of Care`))+
+  # geom_bar(aes(fill = Injury), stat = "identity", alpha = .5)+
+  geom_bar(aes(fill = Injury), stat = "identity", alpha = .5, position = "dodge")+
+  # geom_bar(aes(fill = Injury), stat = "identity", alpha = .5, position_dodge(width ))+
+  geom_text(aes(label = round(`Patient Falls Rate`,2)), position = position_dodge2(width = 1), hjust = 1)+
+  coord_flip()
+g2
+
+```
+
+# 5.3 Stacked Bar Graph 
+
+```{r}
+order_of_rows <- ds %>% 
+  # arrange(desc(`Total Patient Falls Rate`)) %>% 
+  arrange((`Total Patient Falls Rate`)) %>% 
+  select(`Type of Care`) %>% 
+  as.list() %>% unlist() %>% as.character()
+order_of_rows
+
+d3 <- ds %>% 
+  select("Type of Care", "Patient Falls No Injury Rate", "Patient Falls with Injury Rate") %>% 
+  tidyr::gather("Injury", "Patient Falls Rate", 2:3) %>% 
+  mutate(
+    Injury = Injury == "Patient Falls with Injury Rate"
+  )
+g3 <- d3 %>% 
+  mutate(
+    `Type of Care` = factor(`Type of Care`, levels = order_of_rows)
+    ,`Type of Care` = factor(`Type of Care`, levels = rev(levels(`Type of Care`)))
+    ,Injury = rev(Injury)
+  ) %>%
+  ggplot(aes(y=`Patient Falls Rate`,x  = `Type of Care`, fill = `Injury`))+
+  # geom_col()+
+  geom_bar(stat = "identity", alpha = .5)+
+  # geom_bar(aes(fill = Injury), stat = "identity", alpha = .5)+
+  geom_text(
+    aes(label = round(`Patient Falls Rate`,2))
+    ,position = position_stack(vjust = .5)
+  )+
+  theme_bw()
+g3
+
+```
+
+
+
+
+
+
+
+
+
+
+

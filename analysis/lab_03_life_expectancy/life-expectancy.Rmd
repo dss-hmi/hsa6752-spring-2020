@@ -1,0 +1,93 @@
+---
+title: "Life Expectancy"
+author: "Andriy Koval"
+date: "December 30, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+```
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+path_file <- "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+sheet_names <- readxl::excel_sheets(path_file)
+dto <- list()
+for(sheet_i in sheet_names){
+   # i <- sheet_names[1]
+  dto[[sheet_i]] <- readxl::read_xlsx(path_file, sheet = sheet_i)
+}
+ds <- dto$`03 - WHO Life Expect & Mort` %>% tibble::as_tibble()
+```
+
+
+```{r}
+ds %>% DT::datatable()
+ds %>% explore::describe_all()
+```
+
+```{r}
+ds %>% names()
+names_labels <- c(
+  "region"              = "WHO region"                                                                           
+ ,"country"             = "Country"                                                                              
+ ,"year"                = "Year"                                                                                 
+ ,"sex"                 = "Sex"                                                                                  
+ ,"life_expectancy"     = "Life Expectancy at Birth (years)(2015)"                                               
+ ,"mortality_neonatal"  = "Neonatal Mortality Rate (per 1,000 Live Births)(2015)"                                
+ ,"mortality_underfive" = "Under-Five Mortality Rate (Probability of Dying by Age 5 per 1,000 Live Births)(2015)"
+ ,"health_spending"     = "Health Expenditure per Capita (US$)(2014)" 
+)
+names(ds) <- names(names_labels)
+d1 <- ds %>% 
+  filter(region == "Africa") %>% 
+  select(country, life_expectancy, mortality_neonatal, mortality_underfive, health_spending) %>% 
+  tidyr::gather("measure", "value", 2:5)
+
+d1 %>% print()
+```
+
+```{r fig.height=6, fig.width=12}
+order_of_rows <- d1 %>%
+  filter(measure == "life_expectancy") %>% 
+  arrange((value)) %>% 
+  select(country) %>% 
+  as.list() %>% unlist() %>% as.character()
+
+highlight_countries <- c("Mauritania", "South Africa")
+
+g1 <- d1 %>% 
+  mutate(
+    measure = factor(measure, levels = c("life_expectancy","mortality_neonatal","mortality_underfive","health_spending"))
+    ,country = factor(country, levels = order_of_rows)
+    ,highlight = country %in% highlight_countries
+    ,value = round(value, 1)
+  ) %>% 
+  ggplot(aes(x = country, y = value, fill = highlight)) +
+  geom_bar(stat = "identity", alpha = .5, color = "black")+
+  geom_text(aes(label = value), hjust = 0 )+
+  scale_fill_manual(values = c("TRUE"="salmon","FALSE"="lightblue"))+
+  scale_y_continuous(expand = ggplot2::expand_scale(mult = c(0, .2))) +
+  coord_flip()+
+  facet_wrap("measure",nrow = 1,scales = "free_x")
+g1
+
+```
+
+```{r}
+# rmarkdown::render(
+#   input = "../../analysis/02-life-expectancy/life-expectancy.rmd"
+#   ,output_format = "html_document"
+# )
+
+```
+
+
+

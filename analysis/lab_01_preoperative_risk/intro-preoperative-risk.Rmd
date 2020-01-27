@@ -1,0 +1,132 @@
+---
+title: "Preoperative Risk Factors"
+author: "Andriy Koval"
+date: "January 13, 2020"
+output: 
+  html_document: 
+    number_sections: yes
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Basics of R
+
+> Everything is script and the environment is full of objects. 
+
+The following is a brief summary of [R4DS-20-Vectors](https://r4ds.had.co.nz/vectors.html)
+
+The key objects in R language are:  
+- vectors  
+- data frames  
+- lists  
+- functions  
+
+## Vectors
+
+A vector is a collection of values of the same type
+
+```{r}
+vector_numeric <- c(2, 5, 10)
+vector_string  <- c("Joe", "Mary", "Bill")
+vector_logical <- c(FALSE, TRUE, FALSE)
+
+```
+
+## Data Frames
+
+A data frame is a rectangular object in which columns are vectors
+
+```{r}
+df <- data.frame(
+  age     = c(2, 5, 10)
+  ,name   = c("Joe", "Mary", "Bill")
+  ,female = c(FALSE, TRUE, FALSE)
+)
+df
+# alternatively 
+ds <- tibble::tibble(
+    age   = c(2, 5, 10)
+  ,name   = c("Joe", "Mary", "Bill")
+  ,female = c(FALSE, TRUE, FALSE)
+)
+ds
+
+```
+Compare the classes
+```{r}
+class(df)
+class(ds)
+```
+
+A tibble is "an opinionated data frame", which behaves like a list. (see more at [R4DS-10-Tibbles](https://r4ds.had.co.nz/tibbles.html))
+
+## Lists
+
+A list is a collection of  vectors, data frames, or lists
+
+```{r}
+ls_vectors <- list(vector_numeric, vector_string, vector_logical)
+(a <- ls_vectors[1]) # as a list
+(b <- ls_vectors[[1]])
+names(ls_vectors) <- c("age","name","female") # re-run above two lines to compare
+# a better way of naming elements in the list
+ls_vectors <- list(
+  "age"     = vector_numeric
+  ,"name"   = vector_string
+  ,"female" = vector_logical
+  )
+ls_vectors
+# still can refer
+
+```
+
+## Functions
+
+Functions are instructions on what to do with other objects. There are "verbs" in the grammar of R programming. See more in [R4DS-19-Functions](https://r4ds.had.co.nz/functions.html). 
+
+```{r}
+# define function
+compute_mean_of_a_vector <- function(x){mean(x)}
+# how to use
+compute_mean_of_a_vector(x = vector_numeric)
+compute_mean_of_a_vector(x = vector_string)
+compute_mean_of_a_vector(x = vector_logical)
+
+
+# define function
+compute_mean_of_a_column_in_a_dataset <- function(d,column_name){
+  # d <- ds
+  # column_name <- "age"
+  # isolate the vector
+  # vector_x <- as.vector(ds$age)
+  # vector_x <- as.numeric(d[["age"]]) # compare with ds["age"]
+  vector_x <- as.numeric(d[[column_name]]) # compare with ds["age"]
+  # class(vector)
+  (output <- mean(vector_x))
+  return(output)
+}
+# how to use
+compute_mean_of_a_column_in_a_dataset(d = ds, column_name = "age")
+```
+
+
+# Import data
+
+Remember that a when working in RMarkdown document, the root (home directory) is where this document is located.
+```{r}
+getwd() # to remind us where we are
+# use the "Import Dataset" wizard, then copy code into the chunk
+ds_risk <- readxl::read_excel(
+  path = "../../data-public/raw/Tableau 10 Training Practice Data.xlsx"
+  ,sheet = "01 - Preoperative Risk Factors"
+)
+ds_risk
+  
+
+```
+
+

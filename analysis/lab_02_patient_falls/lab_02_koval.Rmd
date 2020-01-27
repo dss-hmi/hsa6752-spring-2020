@@ -1,0 +1,160 @@
+---
+title: "Lab 02 - Patient Falls"
+author: "Andriy Koval"
+date: "January 20, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr) # data wrangling
+library(ggplot2) # data visualization
+library(magrittr) # pipes # https://r4ds.had.co.nz/pipes.html
+```
+
+
+# Data input
+
+```{r}
+ds <- readxl::read_xlsx(
+  path = "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+  , sheet = "02 - Patient Falls-Single Hosp"
+)
+ds %>% dplyr::glimpse() # see how to use pipes at  https://r4ds.had.co.nz/pipes.html
+ds %>% knitr::kable() # equivalent to knitr::kable(ds)
+```
+
+# Tweak data
+
+```{r}
+# automatic renaming of the variables
+# varnames <- names(ds)
+# varnames <- tolower(varnames)
+# varnames <- stringr::str_replace_all(varnames, " ", "_")
+# names(ds) <- varnames
+# 
+# names(ds) <- tolower(names(ds))
+# names(ds) <- str_replace_all(names(ds)," ", "_")
+
+# manual renaming
+# names(ds)
+new_names <- c(
+  "care_type"
+  ,"falls_no_injury_count"
+  ,"falls_no_injury_rate"
+  ,"falls_injury_count"
+  ,"falls_injury_rate"
+  ,"falls_total_count"
+  ,"falls_total_rate"
+  ,"patient_days_total_count" 
+)
+names(ds) <- new_names
+ds %>% glimpse()
+```
+
+# 5.1 - Vertical Bar graph
+```{r}
+d1 <- ds %>% 
+  dplyr::select(care_type, falls_total_rate)
+
+g1 <- d1 %>% 
+  ggplot(mapping = aes(y = falls_total_rate, x = reorder(care_type, falls_total_rate) )) +
+  # add custom color using names from http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf
+  geom_bar(stat = "identity", fill = "royalblue4")+
+  geom_text(
+    aes(label= falls_total_rate %>% round(1))
+    ,nudge_y = .2
+  )+
+  coord_flip()+
+  labs(
+    title = "Rate of Patient Falls (per 1,000 Patient Days) by Type of Care" 
+    ,y = NULL, x = NULL
+  )+
+  theme_minimal()
+g1
+
+```
+
+
+
+# 5.2 Side-by-Side Bar Graph
+
+```{r fig.height=4, fig.width=9}
+
+d2 <- ds %>% 
+  dplyr::select(care_type, falls_injury_rate, falls_no_injury_rate )
+# tidy transformation, read about here https://r4ds.had.co.nz/tidy-data.html
+d2 %>% knitr::kable()
+
+d2_long <- d2 %>% 
+  tidyr::gather(key = "injury" , value = "rate_of_falls", 2:3 ) %>% 
+  dplyr::mutate(
+    injury = (injury == "falls_injury_rate")
+  )
+d2_long %>% knitr::kable()  
+
+g2 <- d2_long %>% 
+  ggplot(
+    mapping = aes(
+      y      = rate_of_falls
+      , x    = reorder(care_type, -rate_of_falls)
+      , fill = injury
+    )
+  )+
+  geom_bar(stat = "identity", position = "dodge")+
+  scale_x_discrete(position = "top")+
+  scale_fill_manual(values = c("FALSE" = "royalblue4", "TRUE" = "darkgoldenrod1")  )+
+  labs(
+    title = "Rate of Patient Falls \n By Type of Care"
+    ,fill = "Injury from fall"
+    ,y = "Rate of Fall"
+    ,x = NULL
+  )+
+  theme_bw()
+  
+g2
+
+```
+
+# 5.3 Stacked Bar Graph
+
+```{r}
+g3 <- d2_long %>% 
+  ggplot(
+    mapping = aes(
+      y      = rate_of_falls
+      , x    = reorder(care_type, -rate_of_falls)
+      , fill = injury
+    )
+  )+
+  geom_bar(stat = "identity", position = position_stack() )+
+  geom_text(
+    aes(label = rate_of_falls)
+    ,position = position_stack(vjust = .5)
+    , color = "white"
+  )+
+  scale_x_discrete(position = "top")+
+  scale_fill_manual(values = c("FALSE" = "royalblue4", "TRUE" = "darkgoldenrod1")  )+
+  labs(
+    title = "Rate of Patient Falls \n By Type of Care"
+    ,fill = "Injury from fall"
+    ,y = "Rate of Fall"
+    ,x = NULL
+  )+
+  coord_flip()+
+  theme_bw()
+  
+g3
+
+```
+
+
+
+
+
+
+
+
