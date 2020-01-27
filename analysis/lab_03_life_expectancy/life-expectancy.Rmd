@@ -24,17 +24,17 @@ for(sheet_i in sheet_names){
    # i <- sheet_names[1]
   dto[[sheet_i]] <- readxl::read_xlsx(path_file, sheet = sheet_i)
 }
-ds <- dto$`03 - WHO Life Expect & Mort` %>% tibble::as_tibble()
+ds0 <- dto$`03 - WHO Life Expect & Mort` %>% tibble::as_tibble()
 ```
 
 
 ```{r}
-ds %>% DT::datatable()
-ds %>% explore::describe_all()
+ds0 %>% DT::datatable()
+ds0 %>% explore::describe_all()
 ```
 
 ```{r}
-ds %>% names()
+ds0 %>% names()
 names_labels <- c(
   "region"              = "WHO region"                                                                           
  ,"country"             = "Country"                                                                              
@@ -45,11 +45,16 @@ names_labels <- c(
  ,"mortality_underfive" = "Under-Five Mortality Rate (Probability of Dying by Age 5 per 1,000 Live Births)(2015)"
  ,"health_spending"     = "Health Expenditure per Capita (US$)(2014)" 
 )
-names(ds) <- names(names_labels)
-d1 <- ds %>% 
+ds1 <- ds0 # to preserve the original 
+names(ds1) <- names(names_labels)
+```
+
+```{r}
+# let us study the workflow on a subset so we can trace operations easier
+d1 <- ds1 %>% 
   filter(region == "Africa") %>% 
   select(country, life_expectancy, mortality_neonatal, mortality_underfive, health_spending) %>% 
-  tidyr::gather("measure", "value", 2:5)
+  tidyr::gather("measure", "value", 2:5) # pivot to longer
 
 d1 %>% print()
 ```
