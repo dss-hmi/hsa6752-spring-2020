@@ -1,0 +1,118 @@
+---
+title: "Lab 03 - WHO Life Expectancy"
+author: "Andriy Koval"
+date: "January 27, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr) # data wrangling
+library(ggplot2) # data visualization
+library(magrittr) # pipes # https://r4ds.had.co.nz/pipes.html
+```
+
+
+# Data input
+
+```{r}
+# readxl::excel_sheets(
+#   path = "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+# )
+
+ds0 <- readxl::read_xlsx(
+  path = "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+  , sheet = "03 - WHO Life Expect & Mort"
+)
+# ds0 %>% knitr::kable() # equivalent to knitr::kable(ds)
+ds0 %>% DT::datatable(filter = "top")
+```
+
+# Let's view some graphs!
+
+
+```{r fig.height=14, fig.width=7}
+p <- ggplot(data = ds0, aes( 
+  y  = `Life Expectancy at Birth (years)(2015)`
+  ,x = reorder(`Country`, desc(`Life Expectancy at Birth (years)(2015)`) ) )
+) + 
+  geom_bar(aes(fill = `WHO region`), stat = "identity")+
+  coord_flip()
+print(p)
+
+```
+
+# Tweak Data
+
+```{r}
+names(ds0)
+new_varnames <- c(
+ "region"             = "WHO region"                                                                           
+,"country"            = "Country"                                                                              
+,"year"               = "Year"                                                                                 
+,"sex"                = "Sex"                                                                                  
+,"life_expectancy"    = "Life Expectancy at Birth (years)(2015)"                                               
+,"mortality_neonatal" = "Neonatal Mortality Rate (per 1,000 Live Births)(2015)"                                
+,"motality_underfive" = "Under-Five Mortality Rate (Probability of Dying by Age 5 per 1,000 Live Births)(2015)"
+,"health_spending"    = "Health Expenditure per Capita (US$)(2014)"  
+)
+
+ds1 <- ds0 # to keep the original
+
+names(ds1) <- names(new_varnames)
+ds1 %>% glimpse()
+```
+# Make data tidy
+
+```{r}
+d <- ds1 %>% dplyr::filter(country == "Ukraine")
+
+d1 <- ds1 %>% 
+  # dplyr::filter(country == "Ukraine") %>% 
+  tidyr::gather(key = "measure", value = "value", 5:8)
+
+# d1
+# d1 %>% dplyr::glimpse()
+```
+
+# Table lens graph
+
+```{r fig.height=7, fig.width=10}
+highlighted_countries <- c("Mauritania", "South Africa")
+selected_region <- "Africa"
+
+order_of_rows <- d1 %>% 
+  dplyr::filter(region == selected_region) %>% 
+  dplyr::filter(measure == "life_expectancy") %>% 
+  # dplyr::arrange(desc(value)) %>% 
+  dplyr::arrange(value) %>% 
+  dplyr::select(country) %>% 
+  as.list() %>% unlist() %>% as.character()
+
+
+g1 <- d1 %>% 
+  dplyr::filter(region == selected_region) %>% 
+  dplyr::mutate(
+    highlight  = country %in% highlighted_countries
+    ,country = factor(country, levels = order_of_rows)
+  ) %>% 
+  ggplot(
+    aes( 
+      x      = country
+      , y    = value
+      , fill = highlight 
+    )
+  )+
+  geom_col()+
+  facet_grid(.~measure, scales = "free_x")+
+  scale_fill_manual(values = c("TRUE" = "gold", "FALSE" = "#2b83ba") )+
+  geom_text(aes(label = round(value) ), nudge_y = 2)+
+  coord_flip()+
+  theme_bw()
+
+g1
+
+```
