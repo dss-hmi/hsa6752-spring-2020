@@ -1,0 +1,211 @@
+---
+title: "FTE counts + YOY Change"
+author: "Andriy Koval"
+date: "Feb 10, 2020"
+output: 
+  html_document: 
+    keep_md: no
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+```
+
+
+
+# Load Data
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+path_file <- "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+sheet_names <- readxl::excel_sheets(path_file)
+dto <- list()
+for(sheet_i in sheet_names){
+   # i <- sheet_names[1]
+  dto[[sheet_i]] <- readxl::read_xlsx(path_file, sheet = sheet_i)
+}
+ds_fte <- dto$`08 - Department FTE Counts` %>% tibble::as_tibble()
+ds_yoy <- dto$`09 - Patient Volume YOY Change` %>% tibble::as_tibble()
+```
+
+## Inspect FTE
+```{r}
+ds_fte %>% DT::datatable()
+ds_fte %>% explore::describe_all()
+
+```
+
+## Inspect YOY  
+```{r}
+ds_yoy %>% DT::datatable()
+ds_yoy %>% explore::describe_all()
+```
+
+# Bar - FTE 
+
+## Tweak Data
+```{r tweak-data-fte}
+new_varnames_fte <- c("department" , "fte_budgeted" , "fte_actual")
+names(ds_fte) <- new_varnames_fte 
+
+ds_fte <- ds_fte %>%
+  dplyr::mutate(fte_difference = fte_actual - fte_budgeted)
+ds_fte %>% glimpse()
+```
+
+## Bar
+
+```{r bar_draft}
+# 0 Basic plot
+g0 <- ds_fte %>%
+  ggplot(aes(x = department, y = fte_difference))+
+  geom_col()
+g0
+
+# 1 Sort columns by descending fte_difference
+g1 <- ds_fte %>%
+    ggplot(aes(x = forcats::fct_reorder(department,-fte_difference), y = fte_difference))+
+    geom_col()
+g1
+
+# 2 Add Color = All bars same color
+g2 <- ds_fte %>%
+    ggplot(aes(x = forcats::fct_reorder(department,-fte_difference), y = fte_difference))+
+    geom_col(fill = "blue")
+g2
+
+# 3 Add Color = Mapped onto a variable
+g3 <- ds_fte %>%
+  dplyr::mutate(
+    negative = fte_difference < 0
+  ) %>%
+   ggplot(aes(x = stats::reorder(department,-fte_difference), y = fte_difference))+
+   geom_col(aes(fill = negative), color = "black")+
+   scale_fill_manual(values = c("TRUE" = "#fc8d59", "FALSE" = "#91bfdb"))
+  # geom_col(aes(fill = fte_difference), color = "black")+
+  # scale_fill_gradient2(low = "#e9a3c9",mid = "white", high = "#a1d76a", midpoint = 0)
+g3
+
+# add zero line
+g4 <- g3 +
+  geom_hline(yintercept = 0)
+g4
+
+# enforce custom tick marks
+g5 <- g4 +
+  scale_y_continuous(breaks = seq(-80, 30, 20))
+g5
+# customize grid lines
+g6 <- g5 +
+  theme_bw()+ # notice what happens when you put this last
+  theme(
+    panel.grid.minor.y = element_blank()
+    ,panel.grid.major.x = element_blank()
+  )
+g6
+
+# add titles and labels
+g7 <- g6 +
+  labs(
+  x      = "Department"
+  ,y     = "Difference between actual and budgeted FTE"
+  ,title = "Deviation of Actual FTE to Budgeted FTE \nby Department"
+  ,fill  =  "Over the budget"
+)
+g7
+```
+
+Now let us create the final graph as a single sentence:
+```{r bar_final}
+g_fte <- ds_fte %>%
+  dplyr::mutate(negative = fte_difference < 0) %>%
+  ggplot(
+    mapping = aes(
+      x = stats::reorder(department, -fte_difference),
+      y = fte_difference
+      )
+  )+
+  geom_col(aes(fill = negative), color = "black") +
+  scale_fill_manual(values = c("TRUE" = "#fc8d59", "FALSE" = "#91bfdb")) +
+  geom_hline(yintercept = 0) +
+  scale_y_continuous(breaks = seq(-80, 30, 20)) +
+  theme_bw() +
+  theme(
+    panel.grid.minor.y = element_blank()
+  , panel.grid.major.x = element_blank()
+  ) +
+  labs(
+    x      = "Department"
+    ,y     = "Difference between actual and budgeted FTE"
+    ,title = "Deviation of Actual FTE to Budgeted FTE \nby Department"
+    ,fill  =  "Over the budget"
+)
+g_fte
+```
+
+## Line
+
+```{r tweak-data-yoy}
+ds_yoy %>% glimpse()
+
+new_varnames_yoy <- c("date","patient_visit_count")
+names(ds_yoy) <- new_varnames_yoy
+
+d2 <- ds_yoy %>% 
+  dplyr::mutate(
+    month = lubridate::month(date)
+    ,year = lubridate::year(date)
+    ,month = factor(month, levels = c(1:12), labels = month.abb[1:12])
+  ) %>%
+  dplyr::select(-date) %>% 
+  tidyr::pivot_wider(names_from = year, values_from = patient_visit_count) %>% 
+  dplyr::mutate(
+    yoy_difference_percent = round( (`2016` - `2015`)/`2016`*100, 2)
+  )
+  
+d2 %>% glimpse()
+d2 %>% head()
+```
+
+```{r}
+# basic graph
+g0 <- d2 %>% 
+  ggplot(aes(x = month, y = yoy_difference_percent, group = 1))+
+  geom_line()
+g0
+  
+# Add geoms 
+g1 <- g0 +
+  geom_point()+
+  # geom_text(aes(label = yoy_difference_percent), nudge_y = 1)
+  ggrepel::geom_label_repel(aes(label = yoy_difference_percent))
+g1
+
+# add zero line
+g2 <- g1 +
+  geom_hline(yintercept = 0, linetype = "dashed")
+g2
+
+# tweak scale
+g3 <- g2+
+  scale_y_continuous(breaks = seq(-6,7,1))
+g3
+
+# add labels and title
+g4 <- g3 +
+  labs(
+    title = "Percent Change of Hospital Emergency Department Patient Volume by Month,  
+2016 compared with 2015"
+    ,x = NULL
+    ,y = "YOY Patient Visit Percent Change"
+  )+
+  theme_bw()
+g4
+```
+
+
