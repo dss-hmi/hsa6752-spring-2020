@@ -39,7 +39,7 @@ opts_chunk$set(
 echoChunks <- FALSE
 options(width=120) #So the output is 50% wider than the default.
 # connect to the file with the underlying R script  
-read_chunk("./analysis/analysis-a.R") 
+read_chunk("./analysis/*/report_1.R") 
 ```
 
 
@@ -99,12 +99,5 @@ if( requireNamespace("devtools", quietly = TRUE) ) {
   sessionInfo()
 } 
 ```
-</details>
-
-```{r session-duration, echo=FALSE}
-report_render_duration_in_seconds <- round(as.numeric(difftime(Sys.time(), report_render_start_time, units="secs")))
-```
-
-Report rendered by `r Sys.info()["user"]` at `r strftime(Sys.time(), "%Y-%m-%d, %H:%M %z")` in `r report_render_duration_in_seconds` seconds.
 
 
