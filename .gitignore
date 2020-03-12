@@ -39,6 +39,8 @@ rsconnect/
 /unshared-material/*
 /data-unshared/*
 /data/unshared/*
+/*/*/submissions/*
+/analysis/end-of-quarter/*
 
 # Dataset Exceptions
 !utility/package-dependency-list.csv
