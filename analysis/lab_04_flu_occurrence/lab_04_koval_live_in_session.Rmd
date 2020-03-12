@@ -1,0 +1,173 @@
+---
+title: "Lab 04 - Flu Occurrence"
+author: "Andriy Koval"
+date: "February 3, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load the libraries used in this project
+```{r message=FALSE, warning=FALSE}
+library(dplyr) # data wrangling
+library(ggplot2) # data visualization
+library(magrittr) # pipes # https://r4ds.had.co.nz/pipes.html
+library(lubridate) # dates
+```
+
+# Data input
+
+```{r}
+# readxl::excel_sheets(
+#   path = "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+# )
+
+ds0 <- readxl::read_xlsx(
+  path = "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+  , sheet = "05 - Flu Occurrence FY2013-2016"
+)
+# ds0 %>% knitr::kable() # equivalent to knitr::kable(ds)
+ds0 %>% DT::datatable(filter = "top")
+```
+
+# Tweak Data
+
+```{r}
+ds1 <- ds0
+new_varnames <- c(
+  "date"
+  ,"test_flu_positive_count"
+  ,"total_specimen_count"
+  ,"test_flu_positive_percent"
+)
+names(ds1) <- new_varnames
+ds1 <- ds1 %>% 
+  dplyr::mutate(
+    year        = lubridate::year(date) %>% as.integer()
+    ,month      = lubridate::month(date)
+    # ,month_name = lubridate::month(date, label = TRUE, abbr = FALSE)
+    ,month_name = lubridate::month(date, label = TRUE, abbr = TRUE)
+    ,year_f = factor(year)
+  )
+ds1 %>% dplyr::glimpse()
+
+```
+
+# Plan for today
+
+`g1` - will creat the basic plot  
+`g2` - will change oder of months  
+`g3` - will compute fiscal year from existing dates  
+`g4` - will add custom colors and labels   
+
+
+# `g1` - basic plot
+
+```{r}
+g1 <- ds1 %>% 
+  ggplot2::ggplot(
+    aes(
+      x      = month_name
+      ,y     = test_flu_positive_percent 
+      ,color = factor(year)
+    ))+
+  geom_line(aes(group = year))+
+  geom_point()+
+  theme_bw()
+g1
+```
+
+
+
+
+# `g2` Reorder Months
+
+```{r}
+# # build-in constants:
+# LETTERS
+# letters 
+# pi
+# month.abb[10:12]
+# month.name
+new_month_order <- c(month.abb[10:12], month.abb[1:9] )
+ds2 <- ds1 %>%
+  dplyr::mutate(
+    month_name = factor(month_name, levels = new_month_order)
+  )
+g2 <- ds2 %>%
+    ggplot2::ggplot(
+    aes(
+      x      = month_name
+      ,y     = test_flu_positive_percent
+      ,color = factor(year)
+    ))+
+  geom_line(aes(group = year))+
+  geom_point()+
+  theme_bw()
+g2
+```
+
+
+# `g3` Fiscal Year
+
+```{r}
+ds3 <- ds2 %>% 
+  dplyr::mutate(
+    year_fiscal = year + (month_name %in% c("Oct","Nov", "Dec") ) 
+  )
+g3 <- ds3 %>%
+    ggplot2::ggplot(
+    aes(
+      x      = month_name
+      ,y     = test_flu_positive_percent
+      ,color = factor(year_fiscal)
+    ))+
+  geom_line(aes(group = year_fiscal))+
+  geom_point()+
+  theme_bw()
+g3
+```
+ 
+
+# `g4` Colors and Labels
+
+```{r}
+# custom_palette_year <- viridis::plasma(4)
+
+ds4 <- ds3 %>% 
+  dplyr::mutate(
+    test_flu_positive_percent_display = round(test_flu_positive_percent * 100, 0)
+  )
+g4 <- ds4 %>%
+    ggplot2::ggplot(
+    aes(
+      x      = month_name
+      ,y     = test_flu_positive_percent_display
+      ,color = factor(year_fiscal)
+    ))+
+  geom_line(aes(group = year_fiscal))+
+  geom_point()+
+  theme_bw()+
+  viridis::scale_color_viridis(discrete = TRUE, option = "magma", end = .8)+
+  labs(
+    x  = "Month"
+    ,y = "% Positive for Flu"
+    , color = "Fiscal Year"
+  )
+g4
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

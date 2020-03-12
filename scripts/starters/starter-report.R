@@ -1,4 +1,3 @@
-# knitr::stitch_rmd(script="./___/___.R", output="./___/stitched-output/___.md")
 #These first few lines run only when the file is run in RStudio, !!NOT when an Rmd/Rnw file calls it!!
 rm(list=ls(all=TRUE))  #Clear the variables from previous runs.
 cat("\f") # clear console
@@ -29,13 +28,13 @@ library(tidyr)    # data tidying
 
 # ---- publish ---------------------------------------
 path_report_1 <- "./analysis/*/report_1.Rmd"
-path_report_2 <- "./analysis/*/report_2.Rmd" # when linking multiple .Rmds to a single .R script
-allReports <- c(path_report_1) # add path_report_n to extend
+# path_report_2 <- "./analysis/*/report_2.Rmd" # when linking multiple .Rmds to a single .R script
+path_files_to_build <- c(path_report_1)
+# path_files_to_build <- c(path_report_1, path_report_2) # add path_report_n to extend
 
-pathFilesToBuild <- c(allReports)
-testit::assert("The knitr Rmd files should exist.", base::file.exists(pathFilesToBuild))
+testit::assert("The knitr Rmd files should exist.", base::file.exists(path_files_to_build))
 # Build the reports
-for( pathFile in pathFilesToBuild ) {
+for( pathFile in path_files_to_build ) {
   rmarkdown::render(input = pathFile,
                     output_format=c(
                       "html_document"

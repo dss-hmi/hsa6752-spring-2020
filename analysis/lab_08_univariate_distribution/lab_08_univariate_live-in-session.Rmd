@@ -1,0 +1,164 @@
+---
+title: "Univariate Distributions"
+author: "Andriy Koval"
+date: "3/1/2020"
+output: 
+  html_document: 
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Agenda for today:  
+
+1. Import and inspect `12 - Clinic Patient Demography` and `06 - Patient Readmission Days` data sets
+2. Join two data sets using `dplyr::left_join()`
+3. Create a univariate scatterplot with jittering
+4. Describe distributions with a 5 number summary using `base::summary()`
+5. Build a boxplot of patient age across race 
+6. Build a violin plot of days to readmission across race
+
+# Reference materials:
+- Chapter 17 `Box-and-Whiskers Plot` in `Tableau for Healthcare` 3rd edition
+- data source:  http://www.healthdataviz.com/resources/ 
+
+## From `R Graphics Cookbook`:  
+- 6.6 Making a Basic Box Plot (https://r-graphics.org/recipe-distribution-basic-boxplot )
+- 6.8 Adding Means to a Box Plot (https://r-graphics.org/recipe-distribution-boxplot-mean)
+- 6.9 Making a Violin Plot(https://r-graphics.org/recipe-distribution-violin)
+
+## Other 
+- Shapes for ggplot2 (http://sape.inf.usi.ch/quick-reference/ggplot2/shape) 
+- Violin plots explained (https://towardsdatascience.com/violin-plots-explained-fb1d115e023d)
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+library(explore)
+```
+
+
+# Load Data
+```{r load-data}
+path_file <- "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+sheet_names <- readxl::excel_sheets(path_file)
+dto <- list()
+for(sheet_i in sheet_names){
+   # i <- sheet_names[1]
+  dto[[sheet_i]] <- readxl::read_xlsx(path_file, sheet = sheet_i)
+}
+ds_demography <- dto$`12 - Clinic Patients Demogr`
+ds_readmissions <- dto$`06 - Patient Readmission Days`
+```
+
+## Inspect Patient Demography
+```{r}
+ds_demography %>% DT::datatable()
+ds_demography %>% explore::describe_all()
+```
+
+## Inspect Readmissions
+```{r}
+ds_readmissions %>% DT::datatable()
+ds_readmissions %>% explore::describe_all()
+
+```
+
+# Tweak data
+## Demography
+```{r tweak-data-demography}
+names(ds_demography) <- c("patient_id", "gender", "race", "age")
+ds_demography <- ds_demography %>% 
+  dplyr::mutate(
+    female = (gender == "F"),
+    race  = forcats::fct_recode(race,
+                                "Asian"     = "As"
+                                ,"Black"    = "B"
+                                ,"Hispanic" = "H"
+                                ,"White"    = "W"
+                                )
+    
+  ) %>% 
+  dplyr::select(-gender) 
+ds_demography %>% glimpse()
+
+```
+
+## Readmissions
+```{r tweak-data-readmission}
+names(ds_readmissions) <- c("patient_id", "cardio_patient", "days_to_readmission")
+ds_readmissions <- ds_readmissions %>% dplyr::select(-cardio_patient)
+ds_readmissions %>% glimpse()
+```
+
+## Join tables
+```{r join}
+ds <- dplyr::left_join(
+  ds_demography
+  ,ds_readmissions
+  ,by = "patient_id"
+)
+ds %>% glimpse()
+
+```
+
+# Describe distribution
+```{r}
+ds %>% base::summary()
+# ds %>% ggplot(aes(x = "Patients", y = age)) + geom_point()
+# ds %>% ggplot(aes(x = "Patients", y = age)) + geom_jitter(width = .1)
+ds %>% 
+  ggplot(aes(x = race, y = age)) + 
+  geom_boxplot()+
+  geom_jitter(width = .2, alpha = .1, size = 3)+
+  stat_summary(fun.y = mean, geom = "point", shape = 1, size = 4, color = "blue")+
+  # stat_summary(fun.y = median, geom = "point", shape = 3, size = 5, color = "red" )+
+  theme_bw()
+
+```
+
+## Boxplot: Age
+
+```{r}
+g0 <- ds %>% 
+  ggplot(aes(x = race, y = age)) + 
+  geom_boxplot(width = .5)+
+  # geom_violin()+ # example of a violin
+  geom_point(
+    position = position_jitter(width = .2, height = 0, seed = 42 )
+     ,shape = 21, color = "black", fill = "salmon",   alpha = .2, size = 4
+    )+
+  stat_summary(fun.y = mean, geom = "point", shape = 1, size = 4, color = "blue")+
+  labs(
+    title = "Age Distribution of Cardiovascular patients by Race",
+    x = "Race", y = "Age in years"
+  )+
+  theme_bw()
+g0
+```
+
+## Boxplot: Readmissions
+
+```{r}
+g1 <- ds %>% 
+  ggplot(aes(x = race, y = days_to_readmission))+
+  geom_violin( fill = "blue", alpha = .2, trim = F)+
+  geom_boxplot(width = .1, fill = "grey90")+
+  stat_summary(fun.y = mean, geom = "point", shape =21, fill = "white", size = 3)+
+  labs(
+    title = "Distribution of Days to Readmission among Cardiovascular Patients by Race"
+    ,x = "Race", y = "Days to Readmission"
+  )+
+  theme_bw()
+g1
+  
+
+
+```
+
+
+

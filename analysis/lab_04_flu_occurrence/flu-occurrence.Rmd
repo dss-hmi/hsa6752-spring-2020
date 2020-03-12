@@ -1,0 +1,217 @@
+---
+title: "Flu Occurence"
+author: "Andriy Koval"
+date: "January 27, 2020"
+output: 
+  html_document: 
+    toc: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+```
+
+# Input data
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+path_file <- "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+sheet_names <- readxl::excel_sheets(path_file)
+dto <- list()
+for(sheet_i in sheet_names){
+   # i <- sheet_names[1]
+  dto[[sheet_i]] <- readxl::read_xlsx(path_file, sheet = sheet_i)
+}
+ds0 <- dto$`05 - Flu Occurrence FY2013-2016` %>% tibble::as_tibble()
+```
+
+# Inspect data
+Let us view the data in a dynamic table and see the key quantitative features of eahc column
+```{r}
+ds0 %>% DT::datatable()
+ds0 %>% explore::describe_all()
+```
+
+# Tweak Data
+
+Let us perform some basic wrangling to prepare data for graphing. We will  
+
+1.  Rename the variables   
+
+1.  Derive more date variables to assist with graph making   
+
+
+```{r tweak-data}
+names(ds0)
+# let's store new names in a vector, in case we need to re-use it later (usually good idea)
+new_varnames <- c(
+  "date"
+  ,"test_flu_positive_count"
+  ,"total_specimen_count"
+  ,"test_flu_positive_percent"
+) 
+ds1 <- ds0 
+names(ds1) <- new_varnames
+
+# let's create a few other date variables to enhance our analysis
+ds1 <- ds1 %>% 
+  dplyr::mutate(
+    year        = lubridate::year(date)
+    ,month      = lubridate::month(date)
+    ,month_name = lubridate::month(date, label=TRUE) 
+    # ,month_name = lubridate::month(date, label=TRUE, abbr=FALSE)
+  )
+ds1 %>% glimpse()
+```
+
+# Plan for today
+
+Today we will proceed to make several graphs, improving the solution with each iteration.   
+
+*   `g1` - will create the basic plot 
+
+*   `g2` - will change the order of the months 
+
+*   `g3` - will computed fiscal year from existing dates 
+
+*   `g4` - will add custom colors and labels  
+
+# `g1` Basic plot
+
+```{r}
+ds1 %>% glimpse(80)
+g1 <- ds1 %>% 
+  ggplot(aes(x = month, y = test_flu_positive_percent, color = factor(year)))+
+  # ggplot(aes(x = month_name, y = test_flu_positive_percent, color = factor(year)))+
+  geom_line()+
+  # geom_line(aes(group = year))+
+  theme_bw()
+g1
+
+```
+
+
+
+# `g2` Order months
+
+Let us change the order of months
+```{r}
+ds1 %>% glimpse(80)
+month_order <- c(month.abb[10:12],month.abb[1:9])
+ds2 <- ds1 %>% 
+  dplyr::mutate(
+    month_name = factor(month_name, levels = month_order )
+  )
+
+g2 <- ds2 %>% 
+  ggplot(aes(x = month_name, y = test_flu_positive_percent, color = factor(year)))+
+  geom_line(aes(group = year), size = 1.5)+
+  theme_bw()
+g2
+
+# Built-in Constants:
+# LETTERS
+# letters
+# month.abb
+# month.name
+# pi
+```
+
+# `g3` Fiscal year
+
+```{r}
+# let us create a column to store FISCAL year
+# FISCAL year starts in October and ends in September
+# if month is Oct, Nov, or Dec then they count toward the following year
+# in other words:
+# d <- ds1 %>% select(date,month_name,calendar_year = year)
+# d %>% 
+#   mutate(
+#     move_to_next_year = (month_name %in% c("Oct","Nov","Dec"))
+#     ,fiscal_year = calendar_year + move_to_next_year
+#   )
+# after we have done testing the logic, let's express it more succinctly
+ds3 <- ds2 %>% 
+  dplyr::mutate(
+    fiscal_year = year + (month_name %in% c("Oct","Nov","Dec"))
+  )
+ds3
+g3 <- ds3 %>% 
+  ggplot(aes(x = month_name, y = test_flu_positive_percent, color = factor(fiscal_year)))+
+  geom_line(aes(group = fiscal_year), size = 1.5)+
+  theme_bw()
+g3
+
+```
+
+
+# `g4` Colors and Lables 
+
+```{r}
+ds4 <- ds3 %>% 
+  dplyr::mutate(
+    y_display_1 = test_flu_positive_percent %>% scales::percent()
+  )
+ds4 %>% glimpse()
+g4 <- ds4 %>% 
+  ggplot(
+    aes(
+      x      = month_name
+      ,y     = (test_flu_positive_percent *100) %>% round(digits =2)
+      ,color = factor(fiscal_year)
+      )
+    )+
+  geom_line(aes(group = fiscal_year), size = 1.5)+
+  viridis::scale_color_viridis(discrete = TRUE, option = "magma", end = .8)+
+  theme_bw()+
+   labs(
+    x  = "Month"
+    ,y = "% Positive for Flu"
+    , color = "Fiscal Year"
+  )
+g4
+```
+
+
+# Adding formats
+
+```{r}
+# let's demonstrate formatting into percentages
+a <- c(.12345678, .0345 , .003456, .0001)
+a
+# method 1
+a %>% round(4) %>%  scales::percent()
+# method 2
+(a*100) %>% round(4) %>% paste0("%")
+
+```
+
+
+
+
+# 
+
+```{r eval = FALSE}
+rmarkdown::render(
+  input        = "../../analysis/lab_04_flu_occurrence/flu-occurrence.rmd"
+  ,output_file = "../../analysis/lab_04_flu_occurrence/flu-occurrence.hmtl"
+)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

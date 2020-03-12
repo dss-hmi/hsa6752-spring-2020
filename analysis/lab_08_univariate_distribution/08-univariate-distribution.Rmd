@@ -1,0 +1,163 @@
+---
+title: "Patient Demography + Readmissions"
+author: "Andriy Koval"
+date: "Feb 10, 2020"
+output: 
+  html_document: 
+    keep_md: no
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+library(explore)
+```
+
+
+
+# Load Data
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+path_file <- "../../data-public/raw/Tableau_10_Training_Files/Tableau 10 Training Practice Data.xlsx"
+sheet_names <- readxl::excel_sheets(path_file)
+dto <- list()
+for(sheet_i in sheet_names){
+   # i <- sheet_names[1]
+  dto[[sheet_i]] <- readxl::read_xlsx(path_file, sheet = sheet_i)
+}
+ds_demography <- dto$`12 - Clinic Patients Demogr`
+ds_readmissions <- dto$`06 - Patient Readmission Days`
+```
+
+## Inspect Patient Demography
+```{r}
+ds_demography %>% DT::datatable()
+ds_demography %>% explore::describe_all()
+
+```
+## Inspect Readmissions  
+```{r}
+ds_readmissions %>% DT::datatable()
+ds_readmissions %>% explore::describe_all()
+```
+# Tweak Data
+## Demography
+```{r tweak-data-demography}
+names(ds_demography) <- c("patient_id","gender", "race", "age")
+ds_demography <- ds_demography %>%
+  dplyr::mutate(female = (gender == "F") ) %>% 
+  dplyr::select(-gender) %>% 
+  dplyr::mutate(
+    race = forcats::fct_recode(race, 
+      # "As" = "Asian"
+      # ,"B" = "Black"
+      # ,"H" = "Hispanic"
+      # ,"W" = "White"
+      "Asian"    = "As"
+      ,"Black"    = "B"
+      ,"Hispanic" = "H"
+      ,"White"    = "W"
+    )
+  )
+ds_demography %>% glimpse()
+```
+### Readmissions
+```{r tweak-data-readmissions}
+names(ds_readmissions) <- c("id_of_patient","cardio_patient","days_to_readmission")
+ds_readmissions <- ds_readmissions %>% 
+  dplyr::select(-cardio_patient) # seems to function as patient_id
+```
+
+### Join tables
+```{r join}
+ds <- dplyr::left_join(
+  ds_demography # left-hand source
+  ,ds_readmissions # right-hand source
+  # ,by = "patient_id" # if the columsn are named the same
+  ,by = c("patient_id" = "id_of_patient") # left_name = right_name
+)
+```
+
+## Describing Distribution
+```{r}
+ds %>% base::summary()
+# ds %>% ggplot(aes(x = "Patients", y = age)) + geom_point()
+# ds %>% ggplot(aes(x = "Patients", y = age)) + geom_jitter(width = .1)
+ds %>% ggplot(aes(x = race, y = age)) + 
+  geom_jitter(width = .2, alpha = .1, size = 3 )+
+  stat_summary(fun.y = mean, geom = "point",  shape = 1, size = 7, color = "blue")+
+  stat_summary(fun.y = median, geom = "point",  shape = 3, size = 7, color = "red")+
+  # coord_flip()+
+  theme_bw()
+```
+```{r}
+ds %>% ggplot(aes(x = race, y = age)) + 
+  geom_boxplot()+
+  geom_jitter(width = .2, alpha = .1, size = 3 )+
+  stat_summary(fun.y = mean, geom = "point",  shape = 1, size = 7, color = "blue")+
+  # stat_summary(fun.y = median, geom = "point",  shape = 3, size = 7, color = "red")+
+  theme_bw()
+```
+
+
+## Box-and-Whiskers: Age
+
+```{r baw-age}
+# basic plot
+g0 <- ds %>% 
+  ggplot(aes(x = race, y = age))+
+  geom_boxplot(width = .5)+
+  # geom_violin(draw_quantiles = .5, fill = "blue", alpha = .1)+
+  # geom_jitter()+
+  geom_point(
+    position = position_jitter(width = .2, seed = 42, height = 0)
+    ,shape = 21, fill = "salmon", color = "black", size =4, alpha = .4
+    )+
+  stat_summary(fun.y = mean, geom = "point",  shape = 1, size = 7, color = "blue")+
+  labs(
+    title = "Age Distribution of Cardiovascular Patients by Race"
+    ,x = "Race", y = "Age in years"
+  )+
+  theme_bw()
+g0
+```
+
+## Box-and-Whiskers: Readmissions
+
+```{r baw-readmission}
+# a different view at the distribution
+# https://r-graphics.org/recipe-distribution-violin
+g1 <- ds %>% 
+  ggplot(aes(x = race, y = days_to_readmission))+
+  # ggplot(aes(x = race, y = age))+
+  geom_violin( fill = "blue", alpha = .1, trim = FALSE)+
+  # geom_jitter(
+  #   width = .1, seed = 42, height = 0
+  #   ,shape = 21, fill = "salmon", color = "black", size =4, alpha = .1
+  #   )+
+  geom_boxplot(width = .1, fill = "grey90",outlier.color = "black", color = "black")+
+  # stat_summary(fun.y = median, geom = "point",  shape = 3, size = 7, color = "red")+
+  stat_summary(fun.y = mean, geom = "point",  shape = 21, size = 3, fill = "white")+
+  theme_bw()+
+   labs(
+    title = "Distribution of Days to Readmission among Cardiovascular Patients by Race"
+    ,x = "Race", y = "Days to Readmission"
+  )
+g1
+# geom_point shapes: http://sape.inf.usi.ch/quick-reference/ggplot2/shape
+
+```
+```
+
+## Graphing function 
+
+```{r}
+
+```
+
+
