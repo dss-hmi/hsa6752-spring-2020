@@ -44,7 +44,7 @@ read_chunk("./analysis/*/report_1.R")
 
 
 
-<!-- Load 'sourced' R files.  Suppress the output when loading packages. --> 
+<!-- Load packages to be used in this report. --> 
 ```{r load-packages, echo=echoChunks, message=FALSE}
 ```
 
