@@ -1,0 +1,192 @@
+---
+title: "Florida Suicide Trends"
+author: "Andriy Koval"
+date: "April 12, 2020"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    toc_depth: 3
+    keep_md: true
+    toc_float: true
+    code_folding: show
+---
+
+<!-- These two chunks should be added in the beginning of every .Rmd that you want to source an .R script -->
+<!--  The 1st mandatory chunck  -->
+<!--  Set the working directory to the repository's base directory -->
+```{r, echo=F, message=F} 
+#Don't combine this call with any other chunk 
+# cat("Working directory: ", getwd()) # check where you are
+  library(knitr)
+# Rmd is in "./reports/reportA/reportA.Rmd", but now the root is "./"
+  knitr::opts_knit$set(root.dir='../../') # "go up" from the folder where this .Rmd is save until you arrive at the root/working directory
+```
+
+<!--  The 2nd mandatory chunck  -->
+<!-- Set the report-wide options, and point to the external code file. -->
+```{r set_options, echo=F}
+# set options shared by all chunks
+opts_chunk$set(
+  results='show', 
+  attr.source = ".numberLines",
+  message = TRUE,
+  comment = NA, 
+  tidy = FALSE,
+  fig.height = 4, 
+  fig.width = 5.5, 
+  out.width = "550px",
+  fig.path = 'figure_rmd/',     
+  dev = "png",
+  dpi = 400
+  # fig.path = 'figure_pdf/',     
+  # dev = "pdf"#,
+  # dev.args=list(pdf = list(colormodel = 'cmyk'))
+)
+echoChunks <- FALSE
+options(width=120) #So the output is 50% wider than the default.
+# connect to the file with the underlying R script  
+read_chunk("./analysis/final-project/florida-suicides.R") # path from the root to the R script.
+# read_chunk("../../../analysis/blogposts/florida-demographic-growth/fl-demo-growth.R") # path from the root to the R script. 
+```
+
+# Environment
+<!-- Load packages to be used in the report  --> 
+```{r load-packages, echo=TRUE, message=FALSE}
+```
+
+<!-- Load 'sourced' R files.  Suppress the output when loading packages. --> 
+```{r load-sources, echo=TRUE, message=FALSE}
+```
+
+<!-- Load any Global functions and variables declared in the R file.  Suppress the output. -->
+ ```{r declare-globals, echo=echoChunks, results='show', message=FALSE}
+ ```
+# Data
+
+```{r load-data, echo=TRUE, results='show', message=FALSE}
+ds0 %>% dplyr::glimpse(90)
+```
+
+# Tweaking
+
+```{r tweak-data-1, echo=TRUE, results='show', message=FALSE}
+```
+
+# Population trends 
+
+## 1. Total count 
+> How does the total population of Florida changes between 2006 and 2020?
+
+```{r population_1, echo=echoChunks, fig.height=5, fig.width=9, out.width = "900px",message=FALSE, results='show',cache=TRUE}
+```
+
+## 2. Within age groups
+> What was the trajectory of population growth for each age group?
+
+```{r population_2, echo=echoChunks, fig.height=5, fig.width=9, out.width = "900px",message=FALSE, results='show',cache=TRUE}
+```
+
+## 3. Sex and age groups
+> For residends between 10 and 84 years of age, what was the trajectory of growth for each age group by sex? 
+
+```{r population_3, echo=echoChunks, results='show', fig.height=5, fig.width=9,out.width = "900px", message=FALSE,cache=TRUE}
+```
+
+## 4. Ethnic group
+> For residends between 10 and 84 years of age, what was the trajectory of growth for each ethnic group?
+
+```{r population_4, echo=echoChunks, fig.height=7, fig.width=9, out.width = "900px", message=FALSE, results='show',cache=TRUE}
+```
+
+
+# Suicide counts 
+
+## 1. Total count 
+> What is the trajectory of total suicides in FL between 2006 and 2017?
+
+```{r suicide_1, echo=echoChunks, fig.height=5, fig.width=9, out.width = "900px",message=FALSE, results='show',cache=TRUE}
+```
+
+## 2. Men vs Women
+> How does the trend of total suicides differ between men and women?
+
+```{r suicide_2, echo=echoChunks, fig.height=5, fig.width=9, out.width = "900px",message=FALSE, results='show',cache=TRUE}
+```
+
+## 3. Sex and age groups
+>For residends between 10 and 84 years of age, how does the trend of suicides counts among ethnic groups differ by sex?  
+
+```{r suicide_3, echo=echoChunks, results='show', fig.height=5, fig.width=9,out.width = "900px", message=FALSE,cache=TRUE}
+```
+
+## 4. Ethnic group
+
+> For residends between 10 and 84 years of age, how does the trend of total suicides between men and women differ across ethnic groups?  
+
+```{r suicide_4, echo=echoChunks, fig.height=7, fig.width=9, out.width = "900px", message=FALSE, results='show',cache=TRUE}
+```
+
+
+# Suicide rates
+
+## 1. Function `compute_rates`
+
+```{r compute_rate_function, echo=echoChunks, fig.height=7, fig.width=9, out.width = "900px", message=FALSE, results='show',cache=TRUE}
+```
+
+Compose the function that computes a rate of suicides per `100,000` for a given aggregation frame. To help you get started, here's the general shape of this function
+```{r eval=F}
+
+compute_suicide_rate <- function(d_input, group_by_variables){
+  d_output <- d_input %>%
+
+  return(d_output)
+}
+```
+Add necessary line, so that the function behaves in the following way and generates the following output:   
+```{r}
+d <- ds0 %>% compute_suicide_rate(group_by_variables = c("year","sex")) # `group_by_variables` may be different
+d %>% neat()
+```
+
+> Hint 1  
+
+You will need to use `group_by` with `.dots` argument
+
+> Hint 2
+
+Make sure you `ungroup` before computing the rates in a separate `mutate` statement
+
+## 2. Total rates
+>  What is the trend of the total suicide rates in Florida between 2006 and 2017?  
+
+```{r suicide_rate_1, echo=echoChunks, fig.height=7, fig.width=9, out.width = "900px", message=FALSE, results='show',cache=TRUE}
+```
+
+## 3. Youth by race and gender
+> For residends between 10 and 24 years of age, how does the rate of suicide vary by race and gender?  
+
+```{r suicide_rate_2, echo=echoChunks, fig.height=7, fig.width=9, out.width = "900px", message=FALSE, results='show',cache=TRUE}
+```
+
+
+# Further insights
+
+What other interesting patterns did you discern in this data? 
+
+
+session information
+===========================================================================
+
+For the sake of documentation and reproducibility, the current report was rendered in the following environment.  Click the line below to expand.
+
+<details>
+  <summary>Environment <span class="glyphicon glyphicon-plus-sign"></span></summary>
+```{r session-info, echo=FALSE}
+if( requireNamespace("devtools", quietly = TRUE) ) {
+  devtools::session_info()
+} else {
+  sessionInfo()
+} 
+```
